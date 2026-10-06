@@ -1,0 +1,2 @@
+{"label_status":"format_example","title":"Provider cuts inference prices","body":"OpenAI lowered the API price of its small model by 20 percent after a rival hosted the same capability.","expected_events":[{"event_type":"PRICE_CHANGE","entities":["OpenAI"]}]}
+{"label_status":"format_example","title":"New training campus","body":"The company announced a datacenter expansion in Texas with 100 megawatts of additional capacity.","expected_events":[{"event_type":"DATACENTER_EXPANSION","entities":["Texas"]}]}
