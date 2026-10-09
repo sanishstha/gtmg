@@ -9,23 +9,14 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from app.config import compute_cost
-from app.extraction.llm import AttemptResult, StructuredLLM, complete_with_retry
+from app.extraction.llm import StructuredLLM
+from app.inference.models import InferenceResult
+from app.inference.provider import extract_event
 from app.models.orm import AgentRun, EconomicEvent, Evidence, ExtractionFailure, SourceDocument
 from app.models.schemas import ExtractionDraft
 from app.text import event_fingerprint, locate_quote
 
-MAX_PROMPT_CHARS = 12_000
 EXTRACTOR_AGENT = "extractor"
-
-SYSTEM_PROMPT = """You extract structured economic events about AI infrastructure from one source document.
-Do not summarize the document.
-Return an event only when the document states it.
-evidence_quote must be copied from the document, not paraphrased.
-If the document states no such event, return an empty events list.
-occurred_at is null when the document does not give a time.
-magnitude and unit are null when the document does not quantify the event.
-confidence is how sure you are that the event is stated, from 0 to 1."""
 
 
 @dataclass
@@ -61,68 +52,46 @@ def extract_document(
     if document_already_extracted(session, document.id):
         return ExtractionOutcome(0, False, 0, 0, 0, 0, 0, Decimal("0"), skipped=True)
 
-    body = document.body[:MAX_PROMPT_CHARS]
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {
-            "role": "user",
-            "content": (
-                f"title: {document.title}\n"
-                f"source_url: {document.source_url}\n"
-                f"published_at: {document.published_at.isoformat() if document.published_at else 'null'}\n\n"
-                f"{body}"
-            ),
-        },
-    ]
-    attempt = complete_with_retry(llm, messages=messages, schema=ExtractionDraft, model=model)
-    cost = compute_cost(model, attempt.tokens_in, attempt.tokens_out)
-    if not attempt.ok:
-        _persist_failure(session, document, attempt, model, cost)
+    result = extract_event(document, model, llm)
+    if not result.success or result.output is None:
+        _persist_failure(session, document, result)
         return ExtractionOutcome(
             events_created=0,
             failed=True,
             grounded_events=0,
             evidence_created=0,
-            tokens_in=attempt.tokens_in,
-            tokens_out=attempt.tokens_out,
-            latency_ms=attempt.latency_ms,
-            cost_usd=cost,
+            tokens_in=result.input_tokens,
+            tokens_out=result.output_tokens,
+            latency_ms=result.latency_ms,
+            cost_usd=result.cost_usd,
         )
 
-    draft = attempt.response.parsed
-    assert isinstance(draft, ExtractionDraft)
-    created, grounded = _persist_events(session, document, draft, attempt, model, cost)
+    created, grounded = _persist_events(session, document, result)
     return ExtractionOutcome(
         events_created=created,
         failed=False,
         grounded_events=grounded,
         evidence_created=created,
-        tokens_in=attempt.tokens_in,
-        tokens_out=attempt.tokens_out,
-        latency_ms=attempt.latency_ms,
-        cost_usd=cost,
+        tokens_in=result.input_tokens,
+        tokens_out=result.output_tokens,
+        latency_ms=result.latency_ms,
+        cost_usd=result.cost_usd,
     )
 
 
-def _persist_failure(
-    session: Session,
-    document: SourceDocument,
-    attempt: AttemptResult,
-    model: str,
-    cost: Decimal | None,
-) -> None:
+def _persist_failure(session: Session, document: SourceDocument, result: InferenceResult) -> None:
     run = AgentRun(
         id=uuid4(),
         agent=EXTRACTOR_AGENT,
-        model=model,
+        model=result.model,
         input={"source_document_id": str(document.id), "title": document.title},
-        output={"raw_text": attempt.response.raw_text, "attempts": attempt.attempts},
-        tokens_in=attempt.tokens_in,
-        tokens_out=attempt.tokens_out,
-        latency_ms=attempt.latency_ms,
-        cost_usd=cost,
+        output={"raw_text": result.raw_text, "attempts": result.attempts},
+        tokens_in=result.input_tokens,
+        tokens_out=result.output_tokens,
+        latency_ms=result.latency_ms,
+        cost_usd=result.cost_usd,
         status="error",
-        error=" | ".join(attempt.errors) or "extraction failed",
+        error=result.error or "extraction failed",
         created_at=datetime.now(timezone.utc),
     )
     session.add(run)
@@ -131,7 +100,7 @@ def _persist_failure(
         ExtractionFailure(
             id=uuid4(),
             source_document_id=document.id,
-            raw_output=attempt.response.raw_text,
+            raw_output=result.raw_text,
             error=run.error or "extraction failed",
             agent_run_id=run.id,
             created_at=datetime.now(timezone.utc),
@@ -140,24 +109,19 @@ def _persist_failure(
     session.flush()
 
 
-def _persist_events(
-    session: Session,
-    document: SourceDocument,
-    draft: ExtractionDraft,
-    attempt: AttemptResult,
-    model: str,
-    cost: Decimal | None,
-) -> tuple[int, int]:
+def _persist_events(session: Session, document: SourceDocument, result: InferenceResult) -> tuple[int, int]:
+    draft = result.output
+    assert isinstance(draft, ExtractionDraft)
     run = AgentRun(
         id=uuid4(),
         agent=EXTRACTOR_AGENT,
-        model=model,
+        model=result.model,
         input={"source_document_id": str(document.id), "title": document.title},
-        output={"events": [event.model_dump(mode="json") for event in draft.events], "attempts": attempt.attempts},
-        tokens_in=attempt.tokens_in,
-        tokens_out=attempt.tokens_out,
-        latency_ms=attempt.latency_ms,
-        cost_usd=cost,
+        output={"events": [event.model_dump(mode="json") for event in draft.events], "attempts": result.attempts},
+        tokens_in=result.input_tokens,
+        tokens_out=result.output_tokens,
+        latency_ms=result.latency_ms,
+        cost_usd=result.cost_usd,
         status="success",
         error=None,
         created_at=datetime.now(timezone.utc),
