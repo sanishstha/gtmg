@@ -75,22 +75,22 @@ Event types are `MODEL_RELEASE`, `PRICE_CHANGE`, `CAPEX_ANNOUNCEMENT`, `CHIP_REL
 
 ## Today's eval results
 
-`python scripts/run_pipeline.py` on 7 Oct 2026, without `OPENAI_API_KEY`:
+`python scripts/run_pipeline.py` on 10 Oct 2026, with `OPENAI_API_KEY` set. The 30 documents and four seeds were already stored, so this run extracted events and updated beliefs:
 
 ```
 Fetched:              30
-New documents:        30
-Events extracted:     0
+New documents:        0
+Events extracted:     53
 Extraction failures:  0
-Hypotheses created:   4
-Hypotheses updated:   0
-Schema validity:      n/a
-Grounded events:      n/a
-Mean latency:         n/a
-Cost:                 n/a
+Hypotheses created:   0
+Hypotheses updated:   2
+Schema validity:      100%
+Grounded events:      98%
+Mean latency:         2.8s
+Cost:                 $0.0805
 ```
 
-The four hypotheses are the seeds, at confidence 0.50. The extractor and the hypothesis agent did not run, so schema validity, grounding, latency, and cost are not measured.
+Three seeds stay at confidence 0.50. Falling inference prices driven by provider competition moved `0.50 → 0.56 → 0.62` on two `SUPPORT` revisions. The model suggested 0.60 and 0.65. Those values are stored and were not applied.
 
 `evals/day1_event_extraction.jsonl` contains two format examples and zero human labels. Event recall and the false-positive rate stay unscored until 20 records have `"label_status": "labeled"`. Do not label those from model output. `python -m app.evals.score` reads the file and joins it to stored events.
 
@@ -98,16 +98,15 @@ The four hypotheses are the seeds, at confidence 0.50. The extractor and the hyp
 
 ## Known failures
 
-Observed on this run, before any model call:
+Observed on this run:
 
-- OpenAI article pages returned HTTP 403, so all 10 OpenAI documents are the RSS blurb. Two Hugging Face items are also under 400 characters. NVIDIA's feed included full text.
-- Model metrics are unmeasured because `OPENAI_API_KEY` was unset.
+- OpenAI article pages returned HTTP 403, so those documents are the RSS blurb. NVIDIA's feed included full text. Two Hugging Face items are also under 400 characters.
 
-`failure_taxonomy.md` lists F1–F8. The observed sections are empty until a model run is reviewed. Do not patch prompts from a guess.
+`failure_taxonomy.md` lists F1–F8. The observed sections are empty until this model output is reviewed. Do not patch prompts from a guess.
 
 ## Phase 2 questions
 
-Start these only after a run that actually calls the model.
+The 10 Oct run called the model. These stay open:
 
 - Can one command print, for any current confidence, the revision, agent run, evidence quote, character span, and source document?
 - Does replaying the revision log reproduce that confidence?

@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="1240" viewBox="0 0 920 1240" role="img" aria-labelledby="title desc">
+  <title id="title">Desk data flow</title>
+  <desc id="desc">RSS feeds become a source document, then an extracted event, evidence, a hypothesis revision, and a read API response. Failures and agent runs are stored beside that path.</desc>
+  <rect width="920" height="1240" fill="#f6f5f2"/>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 1.2 L 9 5 L 0 8.8 Z" fill="#3d3a34"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #fffdf8; stroke: #3d3a34; stroke-width: 1.5; }
+    .side { fill: #fff7ea; stroke: #8a5a12; stroke-width: 1.5; }
+    .label { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 16px; font-weight: 650; fill: #1f1d1a; }
+    .sub { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12px; fill: #5c574e; }
+    .line { stroke: #3d3a34; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+  </style>
+
+  <rect class="box" x="330" y="28" width="260" height="64" rx="8"/>
+  <text class="label" x="460" y="54" text-anchor="middle">RSS feeds</text>
+  <text class="sub" x="460" y="74" text-anchor="middle">OpenAI, NVIDIA, Hugging Face</text>
+
+  <line class="line" x1="460" y1="92" x2="460" y2="124"/>
+
+  <rect class="box" x="330" y="128" width="260" height="64" rx="8"/>
+  <text class="label" x="460" y="154" text-anchor="middle">Ingestion</text>
+  <text class="sub" x="460" y="174" text-anchor="middle">fetch, normalize, hash, dedup</text>
+
+  <line class="line" x1="460" y1="192" x2="460" y2="224"/>
+
+  <rect class="box" x="330" y="228" width="260" height="64" rx="8"/>
+  <text class="label" x="460" y="254" text-anchor="middle">Source document</text>
+  <text class="sub" x="460" y="274" text-anchor="middle">title, body, content hash</text>
+
+  <line class="line" x1="460" y1="292" x2="460" y2="324"/>
+
+  <rect class="box" x="330" y="328" width="260" height="64" rx="8"/>
+  <text class="label" x="460" y="354" text-anchor="middle">Extractor</text>
+  <text class="sub" x="460" y="374" text-anchor="middle">structured events, one retry</text>
+
+  <path class="line" d="M 400 392 L 190 448"/>
+  <path class="line" d="M 520 392 L 730 448"/>
+
+  <rect class="box" x="60" y="452" width="260" height="64" rx="8"/>
+  <text class="label" x="190" y="478" text-anchor="middle">Economic event</text>
+  <text class="sub" x="190" y="498" text-anchor="middle">type, claim, entities</text>
+
+  <rect class="side" x="600" y="452" width="260" height="64" rx="8"/>
+  <text class="label" x="730" y="478" text-anchor="middle">Extraction failure</text>
+  <text class="sub" x="730" y="498" text-anchor="middle">raw output is kept</text>
+
+  <line class="line" x1="190" y1="516" x2="190" y2="548"/>
+
+  <rect class="box" x="60" y="552" width="260" height="64" rx="8"/>
+  <text class="label" x="190" y="578" text-anchor="middle">Evidence</text>
+  <text class="sub" x="190" y="598" text-anchor="middle">quote, span, grounded</text>
+
+  <line class="line" x1="190" y1="616" x2="190" y2="668"/>
+  <line class="line" x1="190" y1="668" x2="460" y2="668"/>
+  <line class="line" x1="460" y1="668" x2="460" y2="700"/>
+
+  <rect class="box" x="330" y="704" width="260" height="64" rx="8"/>
+  <text class="label" x="460" y="730" text-anchor="middle">Hypothesis agent</text>
+  <text class="sub" x="460" y="750" text-anchor="middle">support, contradict, modify</text>
+
+  <path class="line" d="M 400 768 L 190 824"/>
+  <path class="line" d="M 520 768 L 730 824"/>
+  <path class="line" d="M 590 360 C 860 360, 860 760, 790 824"/>
+
+  <rect class="box" x="60" y="828" width="260" height="64" rx="8"/>
+  <text class="label" x="190" y="854" text-anchor="middle">Hypothesis revision</text>
+  <text class="sub" x="190" y="874" text-anchor="middle">append-only confidence</text>
+
+  <rect class="side" x="600" y="828" width="260" height="64" rx="8"/>
+  <text class="label" x="730" y="854" text-anchor="middle">Agent run</text>
+  <text class="sub" x="730" y="874" text-anchor="middle">tokens, latency, cost</text>
+
+  <path class="line" d="M 190 892 L 190 990 L 400 990 L 400 1038"/>
+  <path class="line" d="M 730 892 L 730 990 L 520 990 L 520 1038"/>
+
+  <rect class="box" x="330" y="1040" width="260" height="64" rx="8"/>
+  <text class="label" x="460" y="1066" text-anchor="middle">Read API</text>
+  <text class="sub" x="460" y="1086" text-anchor="middle">Swagger at /docs</text>
+</svg>
